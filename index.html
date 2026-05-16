@@ -425,6 +425,13 @@
       background: #ffffff;
       touch-action: none;
       overflow: hidden;
+      outline: none;
+      border: none;
+      box-shadow: none;
+    }
+
+    .board-stage:focus-visible {
+      outline: none;
     }
 
     #boardZoomLayer {
@@ -447,10 +454,8 @@
       filter: drop-shadow(0 2px 4px rgb(0 128 91 / 0.12));
     }
     .cucumbers-shell:focus-visible {
-      box-shadow:
-        0 0 0 2px #ffffff,
-        0 0 0 5px rgb(0 128 91 / 0.35);
-      border-radius: 6px;
+      outline: none;
+      box-shadow: none;
     }
     .cucumbers-outer {
       position: absolute;
@@ -488,10 +493,8 @@
       outline: none;
     }
     .ruler-shell:focus-visible {
-      box-shadow:
-        0 0 0 2px #ffffff,
-        0 0 0 5px rgb(0 128 91 / 0.35);
-      border-radius: 4px;
+      outline: none;
+      box-shadow: none;
     }
 
     .ruler-outer {
@@ -568,10 +571,8 @@
       filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.1));
     }
     .pencil-shell:focus-visible {
-      box-shadow:
-        0 0 0 2px #ffffff,
-        0 0 0 5px rgb(240 59 80 / 0.35);
-      border-radius: 6px;
+      outline: none;
+      box-shadow: none;
     }
     .pencil-outer {
       position: absolute;
@@ -606,10 +607,8 @@
       filter: drop-shadow(0 2px 5px rgb(0 17 97 / 0.18));
     }
     .creditcard-shell:focus-visible {
-      box-shadow:
-        0 0 0 2px #ffffff,
-        0 0 0 5px rgb(0 17 97 / 0.35);
-      border-radius: 8px;
+      outline: none;
+      box-shadow: none;
     }
     .creditcard-outer {
       position: absolute;
@@ -769,10 +768,10 @@
             class="cucumbers-shell"
             id="cucumbersShell"
             tabindex="0"
-            aria-label="Sklenička s okurkami — na návodě se měří výška skleničky (referenčně 9,5 cm). Přetahujte ji po plátně. Po zaostření klávesou Tab je posouvejte šipkami. Vizualizace je pod tužkou a kartou."
+            aria-label="Sklenička s okurkami — na návodě se měří výška skleničky (referenčně 9,57 cm). Přetahujte ji po plátně. Po zaostření klávesou Tab je posouvejte šipkami. Vizualizace je pod tužkou a kartou."
           >
             <div class="cucumbers-outer" id="cucumbersOuter">
-              <img src="cucumbers.svg" width="351" height="476" alt="Okurky" draggable="false" />
+              <img src="cucumbers.svg" width="351" height="478" alt="Okurky" draggable="false" />
             </div>
           </div>
 
@@ -862,7 +861,7 @@
 
       /** Aktuální měřítko plátna (1 = 100 %). @type {number} */
       var boardZoom = 1;
-      /** Bod měřítka v souřadnicích nástěnky (střed obálky pravítka při změně zoom). */
+      /** Střed měřítka zoomu v px na nástěnce — střed viditelného plátna (ne střed pravítka), aby se při zoomu obsah „netáhl“ za pravítkem. */
       var zoomFocalOx = 0;
       var zoomFocalOy = 0;
 
@@ -878,6 +877,16 @@
         zoomSlider.setAttribute("aria-valuetext", v + " procent");
       }
 
+      function syncAfterZoomChange() {
+        refreshZoomFocalAroundRuler();
+        applyLayout();
+        applyPencilLayout();
+        applyCreditLayout();
+        applyCucumbersLayout();
+        applyBoardZoomCss();
+        updateZoomLabel();
+      }
+
       function bumpZoomStep(dirSign) {
         var lo = Number(zoomSlider.min);
         var hi = Number(zoomSlider.max);
@@ -888,9 +897,7 @@
         if (next > hi) next = hi;
         zoomSlider.value = String(next);
         boardZoom = next / 100;
-        refreshZoomFocalAroundRuler();
-        applyBoardZoomCss();
-        updateZoomLabel();
+        syncAfterZoomChange();
       }
 
       function setBoardZoomPct(pctWhole) {
@@ -901,16 +908,12 @@
         if (p > hi) p = hi;
         zoomSlider.value = String(p);
         boardZoom = p / 100;
-        refreshZoomFocalAroundRuler();
-        applyBoardZoomCss();
-        updateZoomLabel();
+        syncAfterZoomChange();
       }
 
       zoomSlider.addEventListener("input", function () {
         boardZoom = Number(zoomSlider.value) / 100;
-        refreshZoomFocalAroundRuler();
-        applyBoardZoomCss();
-        updateZoomLabel();
+        syncAfterZoomChange();
       });
 
       zoomOutBtn.addEventListener("click", function () {
@@ -926,7 +929,6 @@
       boardStage.addEventListener(
         "wheel",
         function (ev) {
-          if (!(ev.ctrlKey || ev.metaKey)) return;
           ev.preventDefault();
           bumpZoomStep(ev.deltaY > 0 ? -1 : 1);
         },
@@ -934,7 +936,7 @@
       );
 
       /** @type {Record<string, number>} */
-      var REF_CM = { pencil: 4.32, jar: 9.5, creditShort: 5.4, creditLong: 8.56 };
+      var REF_CM = { pencil: 4.32, jar: 9.57, creditShort: 5.4, creditLong: 8.56 };
       var MEAS_TOL_CM = 0.05;
 
       function parseCmInput(raw) {
@@ -1108,27 +1110,6 @@
         };
       }
 
-      function pencilSize() {
-        return {
-          w: pencilImg.offsetWidth || 218,
-          h: pencilImg.offsetHeight || 217,
-        };
-      }
-
-      function creditSize() {
-        return {
-          w: creditCardImg.offsetWidth || 505,
-          h: creditCardImg.offsetHeight || 436,
-        };
-      }
-
-      function cucumbersSize() {
-        return {
-          w: cucumbersImg.offsetWidth || 351,
-          h: cucumbersImg.offsetHeight || 476,
-        };
-      }
-
       function rotCwVec(dx, dy, deg) {
         var r = (deg * Math.PI) / 180;
         var c = Math.cos(r);
@@ -1208,68 +1189,15 @@
         return { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
       }
 
-      function rulerZoomFocalPx() {
-        var box = boardAabb();
-        var finite = Number.isFinite(box.minX) && Number.isFinite(box.maxX);
-        if (finite && box.maxX >= box.minX && box.maxY >= box.minY) {
-          return {
-            x: (box.minX + box.maxX) * 0.5,
-            y: (box.minY + box.maxY) * 0.5,
-          };
-        }
-        var bw = board.clientWidth;
-        var bh = board.clientHeight;
-        return { x: bw * 0.5, y: bh * 0.5 };
-      }
-
       function refreshZoomFocalAroundRuler() {
-        var f = rulerZoomFocalPx();
-        zoomFocalOx = f.x;
-        zoomFocalOy = f.y;
-        if (boardZoomLayer) {
-          boardZoomLayer.style.setProperty("--zoom-origin-x", f.x + "px");
-          boardZoomLayer.style.setProperty("--zoom-origin-y", f.y + "px");
-        }
-      }
-
-      function clampIntoBoard() {
-        var i;
-        for (i = 0; i < 18; i++) {
-          var moved = false;
-          var box = boardAabb();
-
-          if (box.minX < PAD) {
-            bx += PAD - box.minX;
-            moved = true;
-          }
-          if (box.maxX > board.clientWidth - PAD) {
-            bx -= box.maxX - (board.clientWidth - PAD);
-            moved = true;
-          }
-          if (box.minY < PAD) {
-            by += PAD - box.minY;
-            moved = true;
-          }
-          if (box.maxY > board.clientHeight - PAD) {
-            by -= box.maxY - (board.clientHeight - PAD);
-            moved = true;
-          }
-          if (!moved) break;
-        }
-      }
-
-      function clampPencilIntoBoard() {
-        var sz = pencilSize();
-        var w = sz.w;
-        var h = sz.h;
         var bw = board.clientWidth;
         var bh = board.clientHeight;
-        var minPxEff = PAD;
-        var maxPxEff = PAD + Math.max(0, bw - 2 * PAD - w);
-        var minPyEff = PAD;
-        var maxPyEff = PAD + Math.max(0, bh - 2 * PAD - h);
-        pencilPx = Math.min(maxPxEff, Math.max(minPxEff, pencilPx));
-        pencilPy = Math.min(maxPyEff, Math.max(minPyEff, pencilPy));
+        zoomFocalOx = bw * 0.5;
+        zoomFocalOy = bh * 0.5;
+        if (boardZoomLayer) {
+          boardZoomLayer.style.setProperty("--zoom-origin-x", zoomFocalOx + "px");
+          boardZoomLayer.style.setProperty("--zoom-origin-y", zoomFocalOy + "px");
+        }
       }
 
       function applyPencilLayout() {
@@ -1277,37 +1205,9 @@
         pencilOuter.style.setProperty("--pencil-y", pencilPy + "px");
       }
 
-      function clampCreditIntoBoard() {
-        var sz = creditSize();
-        var w = sz.w;
-        var h = sz.h;
-        var bw = board.clientWidth;
-        var bh = board.clientHeight;
-        var minPxEff = PAD;
-        var maxPxEff = PAD + Math.max(0, bw - 2 * PAD - w);
-        var minPyEff = PAD;
-        var maxPyEff = PAD + Math.max(0, bh - 2 * PAD - h);
-        creditPx = Math.min(maxPxEff, Math.max(minPxEff, creditPx));
-        creditPy = Math.min(maxPyEff, Math.max(minPyEff, creditPy));
-      }
-
       function applyCreditLayout() {
         creditCardOuter.style.setProperty("--creditcard-x", creditPx + "px");
         creditCardOuter.style.setProperty("--creditcard-y", creditPy + "px");
-      }
-
-      function clampCucumbersIntoBoard() {
-        var sz = cucumbersSize();
-        var w = sz.w;
-        var h = sz.h;
-        var bw = board.clientWidth;
-        var bh = board.clientHeight;
-        var minPxEff = PAD;
-        var maxPxEff = PAD + Math.max(0, bw - 2 * PAD - w);
-        var minPyEff = PAD;
-        var maxPyEff = PAD + Math.max(0, bh - 2 * PAD - h);
-        cucumbersPx = Math.min(maxPxEff, Math.max(minPxEff, cucumbersPx));
-        cucumbersPy = Math.min(maxPyEff, Math.max(minPyEff, cucumbersPy));
       }
 
       function applyCucumbersLayout() {
@@ -1334,7 +1234,6 @@
         by = cy + h / 2;
         thetaDeg = 0;
 
-        clampIntoBoard();
         applyLayout();
       }
 
@@ -1343,7 +1242,6 @@
         var ch = Math.max(0, board.clientHeight - 2 * PAD);
         pencilPx = PAD + cw * 0.58;
         pencilPy = PAD + ch * 0.18;
-        clampPencilIntoBoard();
         applyPencilLayout();
       }
 
@@ -1352,7 +1250,6 @@
         var ch = Math.max(0, board.clientHeight - 2 * PAD);
         creditPx = PAD + cw * 0.1;
         creditPy = PAD + ch * 0.32;
-        clampCreditIntoBoard();
         applyCreditLayout();
       }
 
@@ -1361,7 +1258,6 @@
         var ch = Math.max(0, board.clientHeight - 2 * PAD);
         cucumbersPx = PAD + cw * 0.04;
         cucumbersPy = PAD + ch * 0.52;
-        clampCucumbersIntoBoard();
         applyCucumbersLayout();
       }
 
@@ -1436,10 +1332,6 @@
         cucumbersDragBase = null;
         rotateGripEl = null;
         lastAngleAgainstPivotRad = null;
-        clampIntoBoard();
-        clampPencilIntoBoard();
-        clampCreditIntoBoard();
-        clampCucumbersIntoBoard();
         applyLayout();
         applyPencilLayout();
         applyCreditLayout();
@@ -1535,10 +1427,6 @@
         if (mode === "creditcard-move") accumulateCreditMoveFinger(finger);
         if (mode === "cucumbers-move") accumulateCucumbersMoveFinger(finger);
 
-        clampIntoBoard();
-        clampPencilIntoBoard();
-        clampCreditIntoBoard();
-        clampCucumbersIntoBoard();
         applyLayout();
         applyPencilLayout();
         applyCreditLayout();
@@ -1573,14 +1461,11 @@
       board.addEventListener("pointercancel", onPointerEnd, { passive: false });
 
       window.addEventListener("resize", function () {
-        clampIntoBoard();
-        clampPencilIntoBoard();
-        clampCreditIntoBoard();
-        clampCucumbersIntoBoard();
         applyLayout();
         applyPencilLayout();
         applyCreditLayout();
         applyCucumbersLayout();
+        refreshZoomFocalAroundRuler();
       });
 
       window.addEventListener("load", function () {
@@ -1602,10 +1487,6 @@
           e.preventDefault();
           var dirAlt = e.key === "ArrowLeft" ? -1 : 1;
           thetaDeg += dirAlt * stepDeg;
-          clampIntoBoard();
-          clampPencilIntoBoard();
-          clampCreditIntoBoard();
-          clampCucumbersIntoBoard();
           applyLayout();
           applyPencilLayout();
           applyCreditLayout();
@@ -1629,10 +1510,6 @@
         if (e.key === "ArrowUp") by -= stepPx;
         if (e.key === "ArrowDown") by += stepPx;
 
-        clampIntoBoard();
-        clampPencilIntoBoard();
-        clampCreditIntoBoard();
-        clampCucumbersIntoBoard();
         applyLayout();
         applyPencilLayout();
         applyCreditLayout();
@@ -1658,7 +1535,6 @@
         if (e.key === "ArrowUp") pencilPy -= stepPx;
         if (e.key === "ArrowDown") pencilPy += stepPx;
 
-        clampPencilIntoBoard();
         applyPencilLayout();
       });
 
@@ -1681,7 +1557,6 @@
         if (e.key === "ArrowUp") creditPy -= stepPx;
         if (e.key === "ArrowDown") creditPy += stepPx;
 
-        clampCreditIntoBoard();
         applyCreditLayout();
       });
 
@@ -1704,7 +1579,6 @@
         if (e.key === "ArrowUp") cucumbersPy -= stepPx;
         if (e.key === "ArrowDown") cucumbersPy += stepPx;
 
-        clampCucumbersIntoBoard();
         applyCucumbersLayout();
       });
     })();
