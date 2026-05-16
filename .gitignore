@@ -1,0 +1,11 @@
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+
+# Fenomen Sans máš na licenci — do veřejného GitHubu necommituj binární řezy fontu
+fonts/**/*.woff
+fonts/**/*.woff2
+fonts/**/*.otf
+fonts/**/*.ttf
