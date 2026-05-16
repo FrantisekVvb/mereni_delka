@@ -4,6 +4,16 @@ Malá statická aplikace v prohlížeči: měření objektů přes přetažiteln
 
 ## Spuštění
 
+### Z GitHubu (GitHub Pages)
+
+Živá verze v prohlížeči (po zapnutí Pages v **Settings → Pages**: zdroj větev `main`, složka `/ (root)`).
+
+**[Spustit aplikaci →](https://frantisekvvb.github.io/mereni_delka/)**
+
+Repozitář: [github.com/FrantisekVvb/mereni_delka](https://github.com/FrantisekVvb/mereni_delka).
+
+### Lokálně
+
 - Otevři `index.html` v prohlížeči nebo servíruj kořen adresáře (např. `npx serve .`).
 
 ## Fonty (Fenomen Sans)
