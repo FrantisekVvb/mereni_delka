@@ -206,6 +206,63 @@
       padding: 0 10px 18px;
     }
 
+    .guide-pan-toolbar {
+      width: 100%;
+      max-width: 299px;
+      margin: 0 auto 10px;
+      padding-top: 4px;
+    }
+
+    .canvas-pan-toggle {
+      box-sizing: border-box;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid rgb(0 0 0 / 0.28);
+      background: #ffffff;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      line-height: 1.2;
+      color: #1a1a1a;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .canvas-pan-toggle:hover {
+      background: rgb(0 0 0 / 0.06);
+    }
+
+    .canvas-pan-toggle:active {
+      background: rgb(0 0 0 / 0.1);
+    }
+
+    .canvas-pan-toggle:focus-visible {
+      outline: 2px solid rgb(0 0 0 / 0.45);
+      outline-offset: 2px;
+    }
+
+    .canvas-pan-toggle.is-pressed {
+      border-color: rgb(0 98 71 / 0.55);
+      background: linear-gradient(180deg, #e8f5ef 0%, #d8efe4 100%);
+      color: rgb(0 58 42);
+    }
+
+    .canvas-pan-toggle.is-pressed:hover {
+      border-color: rgb(0 108 78 / 0.72);
+    }
+
+    .canvas-pan-toggle__icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+
     .guide-card {
       position: relative;
       width: 100%;
@@ -440,9 +497,27 @@
       top: 0;
       width: 100%;
       height: 100%;
-      transform: scale(var(--board-zoom, 1));
+      transform: translate(var(--board-pan-x, 0px), var(--board-pan-y, 0px)) scale(var(--board-zoom, 1));
       transform-origin: var(--zoom-origin-x, 50%) var(--zoom-origin-y, 50%);
       will-change: transform;
+    }
+
+    .board-pan-catch {
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      cursor: grab;
+      touch-action: none;
+      background: transparent;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .board-pan-catch[hidden] {
+      display: none !important;
+    }
+
+    .board-pan-catch.is-dragging-pan {
+      cursor: grabbing;
     }
 
     .cucumbers-shell {
@@ -692,6 +767,34 @@
     </div>
 
     <div class="guide-scroll">
+      <div class="guide-pan-toolbar">
+        <button
+          type="button"
+          id="canvasPanToggleBtn"
+          class="canvas-pan-toggle"
+          aria-pressed="false"
+          aria-label="Pohybovat s plátnem — zapíná režim přetahování celého plátna"
+        >
+          <svg
+            class="canvas-pan-toggle__icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M18 11V6a2 2 0 00-2-2 2 2 0 00-2 2M14 10V4a2 2 0 00-2-2 2 2 0 00-2 2v2M10 10.5V6a2 2 0 00-2-2 2 2 0 00-2 2v8a8 8 0 008 8h2c2.8 0 4.5-.86 5.99-2.34l1.41-1.41a2 2 0 00-2.83-2.82L15 15"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Pohybovat s plátnem</span>
+        </button>
+      </div>
       <div class="guide-card">
         <svg class="measure-guide-svg" width="299" height="442" viewBox="0 0 299 442" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Návod k měření" draggable="false" focusable="false">
         <rect x="155.5" y="81.5" width="143" height="33" rx="5.5" fill="#C9C9C9" stroke="black"/>
@@ -817,6 +920,12 @@
             </div>
           </div>
         </div>
+        <div
+          id="boardPanCatch"
+          class="board-pan-catch"
+          hidden
+          aria-hidden="true"
+        ></div>
       </main>
     </div>
   </div>
@@ -858,16 +967,25 @@
       var zoomOutBtn = document.getElementById("zoomOutBtn");
       var zoomInBtn = document.getElementById("zoomInBtn");
       var zoomResetBtn = document.getElementById("zoomResetBtn");
+      var canvasPanToggleBtn = /** @type {HTMLButtonElement} */ (document.getElementById("canvasPanToggleBtn"));
+      var boardPanCatch = /** @type {HTMLElement} */ (document.getElementById("boardPanCatch"));
 
       /** Aktuální měřítko plátna (1 = 100 %). @type {number} */
       var boardZoom = 1;
       /** Střed měřítka zoomu v px na nástěnce — střed viditelného plátna (ne střed pravítka), aby se při zoomu obsah „netáhl“ za pravítkem. */
       var zoomFocalOx = 0;
       var zoomFocalOy = 0;
+      /** Posun celého měřeného plátna v px obrazovky (režim „pohybovat s plátnem“). */
+      var boardPanX = 0;
+      var boardPanY = 0;
+      /** @type {{ ox: number, oy: number, cx: number, cy: number } | null} */
+      var boardPanDragBase = null;
 
       function applyBoardZoomCss() {
         if (boardZoomLayer) {
           boardZoomLayer.style.setProperty("--board-zoom", String(boardZoom));
+          boardZoomLayer.style.setProperty("--board-pan-x", boardPanX + "px");
+          boardZoomLayer.style.setProperty("--board-pan-y", boardPanY + "px");
         }
       }
 
@@ -934,6 +1052,25 @@
         },
         { passive: false }
       );
+
+      canvasPanToggleBtn.addEventListener("click", function () {
+        var on = canvasPanToggleBtn.getAttribute("aria-pressed") !== "true";
+        canvasPanToggleBtn.setAttribute("aria-pressed", on ? "true" : "false");
+        canvasPanToggleBtn.classList.toggle("is-pressed", on);
+        if (on) {
+          boardPanCatch.removeAttribute("hidden");
+          boardPanCatch.setAttribute("aria-hidden", "false");
+        } else {
+          boardPanCatch.setAttribute("hidden", "");
+          boardPanCatch.setAttribute("aria-hidden", "true");
+          boardPanCatch.classList.remove("is-dragging-pan");
+          if (mode === "board-pan") {
+            var capOff = gestureCaptureElement();
+            if (capOff && activePointerId != null) safeReleasePointerCapture(capOff, activePointerId);
+            resetGesture();
+          }
+        }
+      });
 
       /** @type {Record<string, number>} */
       var REF_CM = { pencil: 4.32, jar: 9.57, creditShort: 5.4, creditLong: 8.56 };
@@ -1068,7 +1205,7 @@
 
       hitRotate.addEventListener("keydown", preventActivationSpace);
 
-      /** @typedef {'idle'|'move'|'rotate'|'pencil-move'|'creditcard-move'|'cucumbers-move'} Mode */
+      /** @typedef {'idle'|'move'|'rotate'|'pencil-move'|'creditcard-move'|'cucumbers-move'|'board-pan'} Mode */
       /** @type {Mode} */
       var mode = "idle";
       /** @type {number|null} */
@@ -1315,6 +1452,7 @@
         if (mode === "pencil-move") return pencilOuter;
         if (mode === "creditcard-move") return creditCardOuter;
         if (mode === "cucumbers-move") return cucumbersOuter;
+        if (mode === "board-pan") return boardPanCatch;
         return null;
       }
 
@@ -1324,12 +1462,14 @@
         pencilShell.classList.remove("is-dragging-pencil");
         creditCardShell.classList.remove("is-dragging-creditcard");
         cucumbersShell.classList.remove("is-dragging-cucumbers");
+        boardPanCatch.classList.remove("is-dragging-pan");
         activePointerId = null;
         mode = "idle";
         moveBase = null;
         pencilDragBase = null;
         creditDragBase = null;
         cucumbersDragBase = null;
+        boardPanDragBase = null;
         rotateGripEl = null;
         lastAngleAgainstPivotRad = null;
         applyLayout();
@@ -1420,6 +1560,15 @@
       function onPointerMove(ev) {
         if (mode === "idle" || activePointerId == null || ev.pointerId !== activePointerId) return;
 
+        if (mode === "board-pan") {
+          if (!boardPanDragBase) return;
+          boardPanX = boardPanDragBase.ox + (ev.clientX - boardPanDragBase.cx);
+          boardPanY = boardPanDragBase.oy + (ev.clientY - boardPanDragBase.cy);
+          applyBoardZoomCss();
+          ev.preventDefault();
+          return;
+        }
+
         var finger = boardXYFromClient(ev.clientX, ev.clientY);
         if (mode === "move") accumulateMoveFinger(finger);
         if (mode === "rotate") accumulateRotationAroundCenter(finger);
@@ -1444,7 +1593,7 @@
         resetGesture(ev);
       }
 
-      [hitRotate, rulerOuter, pencilOuter, creditCardOuter, cucumbersOuter].forEach(function (element) {
+      [hitRotate, rulerOuter, pencilOuter, creditCardOuter, cucumbersOuter, boardPanCatch].forEach(function (element) {
         element.addEventListener(
           "lostpointercapture",
           function (lostEv) {
@@ -1454,6 +1603,20 @@
           { passive: true }
         );
       });
+
+      /** @param {PointerEvent} ev */
+      function onBoardPanPointerDown(ev) {
+        if (mode !== "idle") return;
+        if (ev.button != null && ev.button !== 0) return;
+        mode = "board-pan";
+        activePointerId = ev.pointerId;
+        boardPanDragBase = { ox: boardPanX, oy: boardPanY, cx: ev.clientX, cy: ev.clientY };
+        boardPanCatch.classList.add("is-dragging-pan");
+        boardPanCatch.setPointerCapture(ev.pointerId);
+        ev.preventDefault();
+      }
+
+      boardPanCatch.addEventListener("pointerdown", onBoardPanPointerDown, { passive: false });
 
       board.addEventListener("pointerdown", onPointerDown, { passive: false });
       board.addEventListener("pointermove", onPointerMove, { passive: false });
