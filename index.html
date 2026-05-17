@@ -9,7 +9,12 @@
       box-sizing: border-box;
     }
 
-    /* Fenomen Sans: WOFF2 v fonts/FenomenSans/ (uživatelem licencované soubory). */
+    /*
+     * Fenomen Sans: OTF z repa vividbooks/periodickatabulka (složka font/).
+     * Obnovení: curl -fsSL -o fonts/FenomenSans/FenomenSans-Book.otf \
+     *   https://raw.githubusercontent.com/vividbooks/periodickatabulka/main/font/Fenomen%20Sans%20Book.otf
+     * (analogicky Semi Bold → FenomenSans-SemiBold.otf, Bold → FenomenSans-Bold.otf)
+     */
     @font-face {
       font-family: "Fenomen Sans";
       font-style: normal;
@@ -18,12 +23,7 @@
       src:
         local("Fenomen Sans Book"),
         local("FenomenSans-Book"),
-        local("Fenomen Sans Regular"),
-        local("FenomenSans-Regular"),
-        url("fonts/FenomenSans/FenomenSans-Book.woff2") format("woff2"),
-        url("fonts/FenomenSans/FenomenSans-Regular.woff2") format("woff2"),
-        url("fonts/FenomenSans/FenomenSans-Book.woff") format("woff"),
-        url("fonts/FenomenSans/FenomenSans-Regular.woff") format("woff");
+        url("fonts/FenomenSans/FenomenSans-Book.otf") format("opentype");
     }
 
     @font-face {
@@ -34,10 +34,7 @@
       src:
         local("Fenomen Sans Medium"),
         local("FenomenSans-Medium"),
-        url("fonts/FenomenSans/FenomenSans-Book.woff2") format("woff2"),
-        url("fonts/FenomenSans/FenomenSans-Book.woff") format("woff"),
-        url("fonts/FenomenSans/FenomenSans-Medium.woff2") format("woff2"),
-        url("fonts/FenomenSans/FenomenSans-Medium.woff") format("woff");
+        url("fonts/FenomenSans/FenomenSans-Book.otf") format("opentype");
     }
 
     @font-face {
@@ -46,12 +43,10 @@
       font-weight: 600;
       font-display: swap;
       src:
+        local("Fenomen Sans Semi Bold"),
         local("Fenomen Sans SemiBold"),
         local("FenomenSans-SemiBold"),
-        url("fonts/FenomenSans/FenomenSans-SemiBold.woff2") format("woff2"),
-        url("fonts/FenomenSans/FenomenSans-SemiBold.woff") format("woff"),
-        url("fonts/FenomenSans/FenomenSans-Bold.woff2") format("woff2"),
-        url("fonts/FenomenSans/FenomenSans-Bold.woff") format("woff");
+        url("fonts/FenomenSans/FenomenSans-SemiBold.otf") format("opentype");
     }
 
     @font-face {
@@ -62,8 +57,7 @@
       src:
         local("Fenomen Sans Bold"),
         local("FenomenSans-Bold"),
-        url("fonts/FenomenSans/FenomenSans-Bold.woff2") format("woff2"),
-        url("fonts/FenomenSans/FenomenSans-Bold.woff") format("woff");
+        url("fonts/FenomenSans/FenomenSans-Bold.otf") format("opentype");
     }
 
     :root {

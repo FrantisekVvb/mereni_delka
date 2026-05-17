@@ -4,7 +4,7 @@ Thumbs.db
 .env
 .env.*
 
-# Fenomen Sans máš na licenci — do veřejného GitHubu necommituj binární řezy fontu
+# Binární fonty (např. Fenomen Sans) — do veřejného repa je obvykle nepatří vkládat
 fonts/**/*.woff
 fonts/**/*.woff2
 fonts/**/*.otf

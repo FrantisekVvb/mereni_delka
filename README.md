@@ -18,14 +18,14 @@ Repozitář: [github.com/FrantisekVvb/mereni_delka](https://github.com/Frantisek
 
 ## Fonty (Fenomen Sans)
 
-Webfonty nelze do veřejného repozitáře vkládat bez souhlasu licence. Do složky **`fonts/FenomenSans/`** nahraj podle své licence vlastní soubory s očekávanými názvy (`FenomenSans-Book.woff2`, `FenomenSans-SemiBold.woff2`, `FenomenSans-Bold.woff2`). Po klonování repa bude složka z `.gitkeep` prázdná; bez fontů se použije systémová záloha z CSS (`local()` případně systémové sans-serif).
+Soubory v **`fonts/FenomenSans/`** mají název `FenomenSans-{Book,SemiBold,Bold}.otf` a odpovídají OTF z repozitáře [vividbooks/periodickatabulka](https://github.com/vividbooks/periodickatabulka) (`font/` v hlavní větvi — přímé odkazy jsou v komentáři u `@font-face` v `index.html`). Po klonování je složka prázdná kromě `.gitkeep`; fonty staženy ručně nebo podle té URL. Bez stažených OTF použije CSS zálohu (`local()`, případně systémové sans-serif).
 
-Post-kloonování: zkopíruj WOFF2 z licencovaného balíku (viz komentář u `@font-face` v `index.html`).
+Pro veřejné nasazení zvaž licenci k písmu (OTF jsou díky `.gitignore` z Git povětšinu nekomitované).
 
 ## Nasazení na GitHub
 
 1. V adresáři projektu: `git init -b main`
-2. `git add .` (fontové WOFF/WOFF2 se díky `.gitignore` nezařadí)
+2. `git add .` (binární fonty se díky `.gitignore` nezařadí)
 3. Commit a `git remote add origin …`, `git push`
 
 Stránku lze nasadit jako **GitHub Pages** z větve `main`, kořenem repozitáře (soubor `index.html` v rootu stačí).
@@ -34,9 +34,9 @@ Stránku lze nasadit jako **GitHub Pages** z větve `main`, kořenem repozitář
 |------------------|------|
 | `index.html`     | Jedna stránka: rozvržení, styly a skript |
 | `ruler.svg` …    | Obrázky objektů a pravítka na plátně |
-| `fonts/FenomenSans/` | Lokální WOFF2 Fenomen Sans (git ignorováno) |
+| `fonts/FenomenSans/` | Lokální OTF Fenomen Sans ze zdroje výše (git ignorováno) |
 | `_write_guide.rb` | Pomocný skript pro vývoj (generování SVG návodu) |
 
 ## Licence
 
-K vlastnímu kódu si do repozitáře doplň soubor licence (např. MIT). Písmo **Fenomen Sans** drž v mezích licenčního ujednání od vydavatele fontu — binární webfont řezy v tomto projektu do veřejného GitHubu nepatří (viz `.gitignore`).
+K vlastnímu kódu si do repozitáře doplň soubor licence (např. MIT). Písmo **Fenomen Sans** používej v souladu s licencí vlastníka fontu; binární soubory písma projekt kvůli `.gitignore` standardně na GitHub nekomituje.
