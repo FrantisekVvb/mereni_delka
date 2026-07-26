@@ -553,6 +553,7 @@
       transform: translate(var(--board-pan-x, 0px), var(--board-pan-y, 0px)) scale(var(--board-zoom, 1));
       transform-origin: var(--zoom-origin-x, 50%) var(--zoom-origin-y, 50%);
       will-change: transform;
+      touch-action: none;
     }
 
     .board-pan-catch {
@@ -679,6 +680,9 @@
       pointer-events: auto;
       box-sizing: border-box;
       appearance: none;
+      -webkit-appearance: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .hit-rotate::before {
@@ -722,6 +726,23 @@
     .hit-rotate:focus-visible {
       outline: none;
       box-shadow: none;
+    }
+
+    @media (pointer: coarse) {
+      .hit-rotate {
+        width: clamp(104px, 24vmin, 136px);
+        height: clamp(88px, 20vmin, 120px);
+        right: clamp(-22px, -3.2vmin, -10px);
+        bottom: clamp(-20px, -2.8vmin, -8px);
+      }
+
+      .hit-rotate::before {
+        width: 44px;
+        height: 44px;
+        right: 12px;
+        bottom: 12px;
+        font-size: 1.2rem;
+      }
     }
 
     .pencil-shell {
@@ -907,14 +928,26 @@
     }
 
     .table-keypad-panel__action {
+      appearance: none;
+      -webkit-appearance: none;
+      box-sizing: border-box;
       width: 56px;
       height: 56px;
+      margin: 0;
+      padding: 0;
       border: none;
       border-radius: 50%;
-      font-size: 1.75rem;
-      font-weight: 700;
-      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 0;
       cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .table-keypad-panel__action svg {
+      display: block;
+      flex-shrink: 0;
     }
 
     .table-keypad-panel__confirm {
@@ -998,7 +1031,6 @@
   <aside class="left-panel">
     <div class="panel-copy">
       <h1 class="panel-title">Měření délek</h1>
-      <p class="hint">Posouvej předměty po ploše, přikládej pravítko a zadej naměřené délky v levém panelu.</p>
     </div>
     <div class="zoom-bar-left" role="toolbar" aria-label="Přiblížení pracovní plochy">
       <p class="zoom-heading-left" id="zoomBarHeadingLeft">Přiblížení plátna</p>
@@ -1125,12 +1157,12 @@
               <div class="ruler-visual" id="rulerVisual">
                 <img src="ruler.svg" width="520" height="68" alt="" draggable="false" />
 
-                <button
+                <div
                   class="hit-rotate"
+                  role="button"
                   tabindex="-1"
-                  type="button"
-                  aria-label="Otočit kolem levého spodního rohu pravítka (úchop vpravo dole)."
-                ></button>
+                  aria-label="Otočit pravítko (úchop vpravo dole)."
+                ></div>
               </div>
             </div>
           </div>
@@ -1201,8 +1233,29 @@
       </div>
     </div>
     <div class="table-keypad-panel__actions">
-      <button type="button" id="tableKeypadCancel" class="table-keypad-panel__action table-keypad-panel__cancel" aria-label="Zavřít bez uložení">×</button>
-      <button type="button" id="tableKeypadConfirm" class="table-keypad-panel__action table-keypad-panel__confirm" aria-label="Vložit hodnotu">✓</button>
+      <button type="button" id="tableKeypadCancel" class="table-keypad-panel__action table-keypad-panel__cancel" aria-label="Zavřít bez uložení">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path
+            d="M18 6L6 18M6 6l12 12"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+      <button type="button" id="tableKeypadConfirm" class="table-keypad-panel__action table-keypad-panel__confirm" aria-label="Vložit hodnotu">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path
+            d="M5 12.5l5 5L19 7"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
     </div>
   </div>
 </div>
@@ -1782,6 +1835,9 @@
       var activePointerId = null;
       /** @type {HTMLElement|null} */
       var rotateGripEl = null;
+      /** @type {{ fx: number, fy: number } | null} */
+      var rotateStartFinger = null;
+      var rotateGestureArmed = false;
 
       var bx = 0;
       var by = 0;
@@ -1838,7 +1894,11 @@
         var vy = clientY - br.top;
         var ox = zoomFocalOx;
         var oy = zoomFocalOy;
-        return { fx: ox + (vx - ox) / z, fy: oy + (vy - oy) / z };
+        /* Invertuj CSS: translate(pan) scale(z) s originem (ox, oy). */
+        return {
+          fx: ox + (vx - boardPanX - ox) / z,
+          fy: oy + (vy - boardPanY - oy) / z,
+        };
       }
 
       function angleTowardPivot(px, py, vx, vy) {
@@ -2017,7 +2077,7 @@
 
       /** @returns {HTMLElement|null} */
       function gestureCaptureElement() {
-        if (mode === "rotate") return rotateGripEl;
+        if (mode === "rotate") return board;
         if (mode === "move") return rulerOuter;
         if (mode === "pencil-move") return pencilOuter;
         if (mode === "creditcard-move") return creditCardOuter;
@@ -2041,6 +2101,8 @@
         cucumbersDragBase = null;
         boardPanDragBase = null;
         rotateGripEl = null;
+        rotateStartFinger = null;
+        rotateGestureArmed = false;
         lastAngleAgainstPivotRad = null;
         applyLayout();
         applyPencilLayout();
@@ -2057,16 +2119,20 @@
         /** @type {Node | null} */
         var tgt = /** @type {Node | null} */ (ev.target);
 
-        if (hitRotate.contains(tgt)) {
+        if (hitRotate.contains(tgt) || tgt === hitRotate) {
           mode = "rotate";
           rotateGripEl = hitRotate;
           activePointerId = ev.pointerId;
           shell.classList.add("is-dragging-corner");
           lastAngleAgainstPivotRad = null;
-          accumulateRotationAroundCenter(finger);
-          hitRotate.setPointerCapture(ev.pointerId);
+          rotateStartFinger = { fx: finger.fx, fy: finger.fy };
+          rotateGestureArmed = false;
+          /* Capture na board — stabilní cíl i když se úchop pod prstem otáčí (tablet/iOS). */
+          board.setPointerCapture(ev.pointerId);
           ev.preventDefault();
-          focusNoScroll(hitRotate);
+          if (ev.pointerType !== "touch") {
+            focusNoScroll(hitRotate);
+          }
           return;
         }
 
@@ -2141,7 +2207,22 @@
 
         var finger = boardXYFromClient(ev.clientX, ev.clientY);
         if (mode === "move") accumulateMoveFinger(finger);
-        if (mode === "rotate") accumulateRotationAroundCenter(finger);
+        if (mode === "rotate") {
+          if (!rotateGestureArmed) {
+            if (
+              rotateStartFinger &&
+              Math.hypot(finger.fx - rotateStartFinger.fx, finger.fy - rotateStartFinger.fy) < 10
+            ) {
+              ev.preventDefault();
+              return;
+            }
+            rotateGestureArmed = true;
+            lastAngleAgainstPivotRad = null;
+            accumulateRotationAroundCenter(finger);
+          } else {
+            accumulateRotationAroundCenter(finger);
+          }
+        }
         if (mode === "pencil-move") accumulatePencilMoveFinger(finger);
         if (mode === "creditcard-move") accumulateCreditMoveFinger(finger);
         if (mode === "cucumbers-move") accumulateCucumbersMoveFinger(finger);
@@ -2163,7 +2244,7 @@
         resetGesture(ev);
       }
 
-      [hitRotate, rulerOuter, pencilOuter, creditCardOuter, cucumbersOuter, boardPanCatch].forEach(function (element) {
+      [board, hitRotate, rulerOuter, pencilOuter, creditCardOuter, cucumbersOuter, boardPanCatch].forEach(function (element) {
         element.addEventListener(
           "lostpointercapture",
           function (lostEv) {
