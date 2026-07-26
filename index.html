@@ -1466,7 +1466,7 @@
           aria-selected="true"
           data-app-mode="measure"
         >
-          Změř
+          Měření
         </button>
         <button
           type="button"
@@ -1581,7 +1581,7 @@
       <section class="plant-panel" id="plantPanel" aria-labelledby="plantPanelTitle">
         <h2 id="plantPanelTitle" class="plant-panel-title">Rostlina</h2>
         <p class="plant-panel-text">
-          Sleduj růst rostliny a zapisuj do tabulky její délku v konkrétních časech. Z naměřených hodnot vytvoř graf.
+          Sleduj růst kouzelné rostliny a zapisuj do tabulky její délku v konkrétních časech. Z&nbsp;naměřených hodnot vytvoř graf.
         </p>
         <div class="plant-panel-actions">
           <button type="button" class="plant-grow-btn" id="plantGrowBtn">Nechat vyrůst</button>
@@ -1874,7 +1874,7 @@
         var title = document.createElement("h2");
         title.id = "measurePanelTitle";
         title.className = "measure-panel-title";
-        title.textContent = "Změř";
+        title.textContent = "Měření";
         section.appendChild(title);
 
         var list = document.createElement("div");
@@ -1955,17 +1955,22 @@
       var plantChartResizeRaf = null;
       var PLANT_CHART_MAX_POINTS = 10;
 
-      // Stejné keep-ranges jako v projektu Rostlina (přeskočí 76–125 a 216–349).
+      // Keep-ranges: přeskočí 76–125 a plateau bez růstu výhonku 211–345.
       var PLANT_KEEP_SEGMENTS = [
         { srcStart: 0, srcEnd: 75 },
-        { srcStart: 126, srcEnd: 215 },
-        { srcStart: 350, srcEnd: 434 }
+        { srcStart: 126, srcEnd: 210 },
+        { srcStart: 346, srcEnd: 434 }
       ];
       var PLANT_SEEDS_SRC = 75;
-      var PLANT_GROW_SRC = 126;
+      // Po „Nechat vyrůst“ přeskočí ~2 s úvodu bez růstu (dříve od 126).
+      var PLANT_GROW_SRC = 170;
       var PLANT_SLOW_FROM_SRC = 150;
       // Od snímku 150 trvá úsek o 80 % déle → rychlost 1/1,8.
       var PLANT_SLOW_SPEED = 1 / 1.8;
+      // Mezi ~2. a ~6. s stopek (snímky 203–405) ještě o 1 s delší → 4/5 pomalé rychlosti.
+      var PLANT_STRETCH_FROM_SRC = 203;
+      var PLANT_STRETCH_TO_SRC = 405;
+      var PLANT_STRETCH_SPEED = PLANT_SLOW_SPEED * (4 / 5);
 
       var plantDisplayToSource = [];
       PLANT_KEEP_SEGMENTS.forEach(function (seg) {
@@ -2077,7 +2082,16 @@
 
       function plantSyncSpeed(srcFrame) {
         if (!plantAnim) return;
-        plantAnim.setSpeed(srcFrame >= PLANT_SLOW_FROM_SRC ? PLANT_SLOW_SPEED : 1);
+        var speed = 1;
+        if (
+          srcFrame >= PLANT_STRETCH_FROM_SRC &&
+          srcFrame <= PLANT_STRETCH_TO_SRC
+        ) {
+          speed = PLANT_STRETCH_SPEED;
+        } else if (srcFrame >= PLANT_SLOW_FROM_SRC) {
+          speed = PLANT_SLOW_SPEED;
+        }
+        plantAnim.setSpeed(speed);
       }
 
       function syncPlantGrowButton() {
@@ -2301,7 +2315,7 @@
         plantAnim.play();
       }
 
-      /** Pokračuje růstem po semínkách (od snímku 126). */
+      /** Pokračuje růstem po semínkách (od PLANT_GROW_SRC). */
       function startPlantGrowth() {
         ensurePlantAnimation()
           .then(function () {
